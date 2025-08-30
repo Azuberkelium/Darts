@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Darts Champion of the Night</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Cinzel', serif;
+            background-color: #1a202c; /* Dark background */
+        }
+        /* Custom animations for the message box */
+        @keyframes fade-in-up {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        @keyframes fade-out-down {
+            from {
+                opacity: 1;
+                transform: translateY(0);
+            }
+            to {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+        }
+        .animate-fade-in-up {
+            animation: fade-in-up 0.5s forwards;
+        }
+        .animate-fade-out-down {
+            animation: fade-out-down 0.5s forwards;
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen p-4 text-gray-100">
+
+    <!-- Counter App Container -->
+    <div class="bg-gray-800 p-8 rounded-lg shadow-xl text-center w-full max-w-lg">
+        <h1 class="text-3xl font-bold text-gray-200 mb-2">Darts Champion of the Night</h1>
+
+        <!-- Loading Indicator -->
+        <div id="loading" class="mt-4 text-sm text-gray-400">
+            <svg class="animate-spin h-5 w-5 text-gray-400 inline-block mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <span id="loading-text">Connecting...</span>
+        </div>
+
+        <!-- Password and Counters Container -->
+        <div id="main-content" class="hidden">
+            <!-- Password Input -->
+            <div id="password-section" class="mb-6">
+                <label for="password" class="block text-sm font-medium text-gray-400 mb-1">Enter password to unlock:</label>
+                <div class="flex gap-2">
+                    <input type="password" id="password" class="flex-1 p-2 rounded-lg bg-gray-700 text-gray-200 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Password">
+                    <button id="unlock-btn" class="bg-blue-600 text-white py-2 px-4 rounded-lg font-semibold hover:bg-blue-700 transition duration-300 transform active:scale-95 shadow-lg">Unlock</button>
+                </div>
+            </div>
+
+            <!-- Counters Container -->
+            <div id="counters" class="flex flex-col md:flex-row gap-4 mb-6">
+                <!-- King of Darts Counter -->
+                <div class="flex-1 bg-gray-700 rounded-lg p-6 flex flex-col items-center">
+                    <p class="text-xl font-semibold text-gray-200 mb-2">KING OF DARTS</p>
+                    <p class="text-5xl font-extrabold text-blue-400 mb-4" id="king-count">0</p>
+                    <button id="increment-king-btn" class="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-extrabold uppercase text-lg hover:bg-blue-700 transition duration-300 transform active:scale-95 shadow-lg disabled:bg-gray-500 disabled:cursor-not-allowed" disabled>
+                        Won the match!
+                    </button>
+                </div>
+
+                <!-- Prince of Dartness Counter -->
+                <div class="flex-1 bg-gray-700 rounded-lg p-6 flex flex-col items-center">
+                    <p class="text-xl font-semibold text-gray-200 mb-2">PRINCE OF DARTNESS</p>
+                    <p class="text-5xl font-extrabold text-green-400 mb-4" id="prince-count">0</p>
+                    <button id="increment-prince-btn" class="w-full bg-green-600 text-white py-3 px-4 rounded-lg font-extrabold uppercase text-lg hover:bg-green-700 transition duration-300 transform active:scale-95 shadow-lg disabled:bg-gray-500 disabled:cursor-not-allowed" disabled>
+                        Won the match!
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- App Buttons -->
+        <div class="mt-4">
+            <a href="https://champofdarts.netlify.app/" target="_blank" class="block w-full bg-gray-600 text-white py-2 px-4 rounded-lg font-semibold hover:bg-gray-700 transition duration-300 transform active:scale-95 shadow-lg">
+                App
+            </a>
+        </div>
+        <div class="mt-4">
+            <a href="https://open.spotify.com/album/0qeMUkvqDrkOIPsXxm2Rqh?si=zO-m3mFWTnGnsU44RbTQNA" target="_blank" class="block w-full bg-gray-600 text-white py-2 px-4 rounded-lg font-semibold hover:bg-gray-700 transition duration-300 transform active:scale-95 shadow-lg">
+                entrances
+            </a>
+        </div>
+
+        <!-- User ID Display -->
+        <p class="mt-6 text-xs text-gray-500">
+            <span class="font-bold">USER ID:</span>
+            <span id="user-id">LOADING...</span>
+        </p>
+    </div>
+
+    <!-- Firebase SDKs -->
+    <script type="module">
+        // Firebase imports for authentication and Firestore
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInWithCustomToken, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, onSnapshot, runTransaction } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Global variables provided by the environment
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+        // UI elements
+        const kingCountDisplay = document.getElementById('king-count');
+        const princeCountDisplay = document.getElementById('prince-count');
+        const incrementKingBtn = document.getElementById('increment-king-btn');
+        const incrementPrinceBtn = document.getElementById('increment-prince-btn');
+        const loadingDiv = document.getElementById('loading');
+        const mainContentDiv = document.getElementById('main-content');
+        const loadingText = document.getElementById('loading-text');
+        const userIdSpan = document.getElementById('user-id');
+        const passwordInput = document.getElementById('password');
+        const unlockBtn = document.getElementById('unlock-btn');
+        let db;
+        let auth;
+        let userId;
+
+        // Function to show a message box
+        function showMessage(message, type = 'error') {
+            const messageBox = document.createElement('div');
+            let bgColor = type === 'success' ? 'bg-green-500' : 'bg-red-500';
+            messageBox.className = `fixed top-4 right-4 ${bgColor} text-white p-4 rounded-lg shadow-xl transition-transform transform-gpu animate-fade-in-up`;
+            messageBox.textContent = message;
+            document.body.appendChild(messageBox);
+            setTimeout(() => {
+                messageBox.classList.add('animate-fade-out-down');
+                messageBox.addEventListener('animationend', () => messageBox.remove());
+            }, 3000);
+        }
+
+        // Initialize Firebase
+        function initFirebase() {
+            try {
+                // Check if the firebase config is empty or invalid
+                if (!Object.keys(firebaseConfig).length || !firebaseConfig.projectId) {
+                    loadingText.textContent = 'Project configuration not provided.';
+                    console.error("Firebase initialization error: Project configuration is missing or empty.");
+                    showMessage('Error: Project configuration not provided.');
+                    return false;
+                }
+                const app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+                return true;
+            } catch (error) {
+                loadingText.textContent = 'Failed to initialize Firebase.';
+                console.error("Firebase initialization error:", error);
+                showMessage(`Error: ${error.message}`);
+                return false;
+            }
+        }
+
+        // Main setup function
+        async function setup() {
+            if (!initFirebase()) {
+                return;
+            }
+
+            // Authenticate the user
+            try {
+                if (initialAuthToken) {
+                    await signInWithCustomToken(auth, initialAuthToken);
+                } else {
+                    await signInAnonymously(auth);
+                }
+                userId = auth.currentUser.uid;
+                userIdSpan.textContent = userId;
+                loadingDiv.classList.add('hidden');
+                mainContentDiv.classList.remove('hidden');
+            } catch (error) {
+                loadingText.textContent = 'Authentication failed.';
+                console.error("Authentication error:", error);
+                showMessage(`Authentication failed: ${error.message}`);
+                return;
+            }
+
+            // Firestore document reference for the counter
+            // The path was invalid because it had an odd number of segments.
+            // A valid document path must have an even number of segments, e.g., collection/document/collection/document.
+            // We are adding a new collection 'scores' to make the path valid.
+            const counterRef = doc(db, 'artifacts', appId, 'public', 'data', 'scores', 'darts_tally');
+
+            // Set up a real-time listener to the counter document
+            onSnapshot(counterRef, (docSnap) => {
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    kingCountDisplay.textContent = data.kingOfDarts || 0;
+                    princeCountDisplay.textContent = data.princeOfDartness || 0;
+                } else {
+                    console.log("Counter document not found, initializing...");
+                    try {
+                        runTransaction(db, async (transaction) => {
+                            transaction.set(counterRef, { kingOfDarts: 0, princeOfDartness: 0 });
+                        });
+                    } catch (e) {
+                        console.error("Transaction failed: ", e);
+                    }
+                }
+            }, (error) => {
+                console.error("Error listening to document:", error);
+                showMessage("Error fetching data. Check console for details.");
+            });
+
+            // Password check logic
+            unlockBtn.addEventListener('click', () => {
+                if (passwordInput.value === '2601') {
+                    incrementKingBtn.disabled = false;
+                    incrementPrinceBtn.disabled = false;
+                    showMessage('Scores unlocked!', 'success');
+                    passwordInput.value = ''; // Clear the password field
+                } else {
+                    showMessage('Incorrect password.');
+                }
+            });
+
+            // Event listener for the King's increment button
+            incrementKingBtn.addEventListener('click', async () => {
+                if (incrementKingBtn.disabled) return;
+                try {
+                    await runTransaction(db, async (transaction) => {
+                        const docSnap = await transaction.get(counterRef);
+                        const currentCount = docSnap.exists() && docSnap.data().kingOfDarts ? docSnap.data().kingOfDarts : 0;
+                        const newCount = currentCount + 1;
+                        transaction.update(counterRef, { kingOfDarts: newCount });
+                    });
+                } catch (error) {
+                    console.error("Transaction failed: ", error);
+                    showMessage("Error updating King's score. Please try again.");
+                }
+            });
+
+            // Event listener for the Prince's increment button
+            incrementPrinceBtn.addEventListener('click', async () => {
+                if (incrementPrinceBtn.disabled) return;
+                try {
+                    await runTransaction(db, async (transaction) => {
+                        const docSnap = await transaction.get(counterRef);
+                        const currentCount = docSnap.exists() && docSnap.data().princeOfDartness ? docSnap.data().princeOfDartness : 0;
+                        const newCount = currentCount + 1;
+                        transaction.update(counterRef, { princeOfDartness: newCount });
+                    });
+                } catch (error) {
+                    console.error("Transaction failed: ", error);
+                    showMessage("Error updating Prince's score. Please try again.");
+                }
+            });
+        }
+
+        // Start the application
+        window.onload = setup;
+    </script>
+</body>
+</html>
